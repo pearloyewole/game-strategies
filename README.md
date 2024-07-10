@@ -317,3 +317,18 @@ The `available_moves` function
 If you have any questions please ask a TA!
 
 Implement minimax by following the pseudocode from wikipedia! Can you solve the entire game?!
+
+### More!
+
+This is a list of possible extensions you could implement:
+
+- Change [available_positions] to only pick empty positions that are next to occupied
+  pieces to lower the search space. Does the depth you can explore increase?
+- Make your score function "heuristic based" by scoring 2/3/4 consecutive pieces
+  an "n*n" score.
+- Implement a minimax optimization called [alpha beta
+  pruning](https://en.wikipedia.org/wiki/Alpha%E2%80%93beta_pruning). Does the depth
+  that you can explore increase?
+- Make evaluation super fast by using [bit
+  masks](https://medium.com/@LukeASalamone/creating-an-ai-for-gomoku-28a4c84c7a52).
+- Pick different heuristics for your [score] function.
