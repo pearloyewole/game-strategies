@@ -101,8 +101,8 @@ Then clone the fork locally (on your AWS machine) to get started. You can clone 
 the command line like this (where `$USER` is your GitHub username):
 
 ```sh
-$ git clone git@github.com:$USER/tictactoe.git
-Cloning into 'tictactoe'...
+$ git clone git@github.com:$USER/game-strategies.git
+Cloning into 'game-strategies'...
 remote: Enumerating objects: 61, done.
 remote: Counting objects: 100% (61/61), done.
 remote: Compressing objects: 100% (57/57), done.
