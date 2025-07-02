@@ -1,0 +1,10 @@
+(library
+ (name game_strategies_play_lib)
+ (preprocess
+  (pps ppx_jane))
+ (libraries
+  async
+  core
+  game_strategies_common_lib
+  game_strategies_lib
+  graphics))
