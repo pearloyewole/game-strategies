@@ -1,12 +1,10 @@
 open! Core
-open  Game_strategies_common_lib
+open Game_strategies_common_lib
 
-module Exercises : sig
-  val print_game     : Game.t -> unit
-  val exercise_one   : Command.t
-  val exercise_two   : Command.t
-  val exercise_three : Command.t
-  val exercise_four  : Command.t
-end
+val print_game : Game.t -> unit
+
+val make_move : game:Game.t -> you_play:Piece.t -> Position.t
+(** [make_move ~game ~you_play] is a function that takes a game and a piece, and
+    returns the position where the piece should be placed. *)
 
 val command : Async.Command.t
