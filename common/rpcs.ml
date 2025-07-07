@@ -12,5 +12,5 @@ module Take_turn = struct
 
   let rpc =
     Rpc.Rpc.create ~name:"take-turn" ~version:0 ~bin_query:Query.bin_t
-      ~bin_response:Response.bin_t
+      ~bin_response:Response.bin_t ~include_in_error_count:Only_on_exn
 end
