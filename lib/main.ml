@@ -30,18 +30,23 @@ let non_win =
     ]
 
 let print_game (game : Game.t) =
-  (*win for x is a game t with a record of a board. 
-   i want to go through the record map and turn it into a list, using list.init. 
-   but then i need to pretty print, how will i pretty print?*)
-  let board_contents = win_for_x.board in 
-
-  let get_board = List.init (Map.length win_for_x)
-  (match Map.find board_contents { Position.row; col } with
-  | Some X -> "X"
-  | Some O -> "O"
-  | None -> "_" ) ;
-  
-  print_endline get_board; 
+  let print_row row =
+    let cells =
+      List.init (Map.length game.board) ~f:(fun col ->
+          let pos = { Position.row; column = col } in
+          match Map.find game.board pos with
+          | Some X -> "X"
+          | Some O -> "O"
+          | None -> " ")
+    in
+    let cell_strings = String.concat ~sep:" | " (List.take cells 3) in
+    print_endline cell_strings
+  in
+  print_row 0;
+  print_endline "---------";
+  print_row 1;
+  print_endline "---------";
+  print_row 2
 
 let%expect_test "print_win_for_x" =
   print_game win_for_x;
