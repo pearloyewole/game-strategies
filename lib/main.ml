@@ -28,20 +28,22 @@ let non_win =
       ({ row = 2; column = 2 }, X);
       ({ row = 2; column = 0 }, O);
     ]
-
+let find_board_length (game: Game.t) : int  = 
+  Game_kind.board_length (game.game_kind) 
 let print_game (game : Game.t) =
   let print_row row =
     let cells =
-      List.init (Map.length game.board) ~f:(fun col ->
+      List.init (find_board_length game) ~f:(fun col ->
           let pos = { Position.row; column = col } in
           match Map.find game.board pos with
           | Some X -> "X"
           | Some O -> "O"
           | None -> " ")
     in
-    let cell_strings = String.concat ~sep:" | " (List.take cells 3) in
+    let cell_strings = String.concat ~sep:" | " cells in
     print_endline cell_strings
   in
+  (**put into a list then print*)
   print_row 0;
   print_endline "---------";
   print_row 1;
@@ -72,10 +74,31 @@ let%expect_test "print_non_win" =
       |}];
   return ()
 
+
+
 (* Exercise 1 *)
+
 let available_moves (game : Game.t) : Position.t list =
-  ignore game;
-  failwith "Implement me!"
+  (*takes a game as input and returns a list of available positions *)
+  let all_positions_list =
+    List.cartesian_product (List.init (find_board_length game) ~f:(fun row -> row )) (List.init (find_board_length game) ~f:(fun col-> col )) in
+    (*^ this will return a tuple list, need to convert to position, use List.map *)
+    let positions_list = List.map all_positions_list ~f:(fun (row, col) -> {Position.row=row ; Position.column=col}) in
+  List.filter positions_list ~f:(fun pos -> not (Map.mem game.board pos)) 
+
+let%expect_test "available_moves" =
+(*use sexp message syntax instead*)
+  print_s [%message (.concat ~sep: "," (available_moves non_win))] 
+
+  [%expect
+    {|
+      X | O | X
+      ---------
+      O | O | X
+      ---------
+      O | X | X
+      |}];
+  return ()
 
 (* Exercise 2 *)
 let evaluate (game : Game.t) : Evaluation.t =
