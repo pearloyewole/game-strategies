@@ -152,9 +152,10 @@ let winning_moves ~(me : Piece.t) (game : Game.t) : Position.t list =
 
 (* Exercise 4 *)
 let losing_moves ~(me : Piece.t) (game : Game.t) : Position.t list =
-  ignore me;
-  ignore game;
-  failwith "Implement me!"
+  (*check to see if opponent piece is in winning moves list *)
+    let opponent_piece = Piece.flip me in 
+    let losing_list = winning_moves ~me:opponent_piece game in 
+    losing_list
 
 let exercise_one =
   Command.async ~summary:"Exercise 1: Where can I move?"
