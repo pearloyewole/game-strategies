@@ -30,6 +30,7 @@ let non_win =
     ]
 let find_board_length (game: Game.t) : int  = 
   Game_kind.board_length (game.game_kind) 
+
 let print_game (game : Game.t) =
   let print_row row =
     let cells =
@@ -76,34 +77,65 @@ let%expect_test "print_non_win" =
 
 
 
-(* Exercise 1 *)
+let get_all_positions (game: Game.t) = 
+    let all_positions_list = List.cartesian_product (List.init (find_board_length game) ~f:(fun row -> row )) (List.init (find_board_length game) ~f:(fun col-> col )) in 
+    List.map all_positions_list ~f:(fun (row, col) -> {Position.row=row ; Position.column=col})
 
+(* Exercise 1 *)
 let available_moves (game : Game.t) : Position.t list =
   (*takes a game as input and returns a list of available positions *)
-  let all_positions_list =
-    List.cartesian_product (List.init (find_board_length game) ~f:(fun row -> row )) (List.init (find_board_length game) ~f:(fun col-> col )) in
-    (*^ this will return a tuple list, need to convert to position, use List.map *)
-    let positions_list = List.map all_positions_list ~f:(fun (row, col) -> {Position.row=row ; Position.column=col}) in
-  List.filter positions_list ~f:(fun pos -> not (Map.mem game.board pos)) 
+  let all_positions_list = get_all_positions game in 
+  List.filter all_positions_list ~f:(fun pos -> not (Map.mem game.board pos)) 
 
-let%expect_test "available_moves" =
-(*use sexp message syntax instead*)
-  print_s [%message (.concat ~sep: "," (available_moves non_win))] 
+let check_for_win (game: Game.t) (target_piece: Piece.t): bool =
+  (*create a list of winning positions and then use list.mem to see if the current board wins *)
+  let directions = [ (0, 1); (1, 0); (1, 1); (1, -1) ] in
+  let board_size = find_board_length game in 
+  let piece_positions =
+    Map.filter game.board ~f:(fun p -> Piece.equal p target_piece)
+    |> Map.keys
+  in
 
-  [%expect
-    {|
-      X | O | X
-      ---------
-      O | O | X
-      ---------
-      O | X | X
-      |}];
-  return ()
+  List.exists piece_positions ~f:(fun { row; column } ->
+    List.exists directions ~f:(fun (dr, dc) ->
+      let line =
+        List.init board_size ~f:(fun i ->
+          { Position.row = row + (i * dr); column = column + (i * dc) })
+      in
+      List.for_all line ~f:(fun pos ->
+        match Map.find game.board pos with
+        | Some p when Piece.equal p target_piece -> true
+        | _ -> false
+      )
+    )
+  )
 
 (* Exercise 2 *)
 let evaluate (game : Game.t) : Evaluation.t =
-  ignore game;
-  failwith "Implement me!"
+  (*check for an illegal move, then check for a win, and then if all cells are full and no winnner, then draw, otheriwse continue*)
+
+  (*check for an illegal move*)
+  let board_positions = get_all_positions game in 
+  let illegal_move_check = (List.exists board_positions ~f:(
+    fun pos-> pos.row >= find_board_length game || pos.column >= find_board_length game)) in 
+
+  if illegal_move_check 
+    then Evaluation.Illegal_move
+  else (
+  (*check for a win*)
+  if (check_for_win game Piece.X) 
+    then Evaluation.Game_over  {winner = Some Piece.X}
+  else if (check_for_win game Piece.O)
+    then Evaluation.Game_over {winner = Some Piece.O}
+    (*check for a draw*)
+  else 
+    (
+    if List.is_empty (available_moves game)
+      then Evaluation.Game_over {winner = None } 
+  else Evaluation.Game_continues 
+    )
+  ) 
+;;
 
 (* Exercise 3 *)
 let winning_moves ~(me : Piece.t) (game : Game.t) : Position.t list =
@@ -133,7 +165,7 @@ let exercise_two =
      fun () ->
        let evaluation = evaluate win_for_x in
        print_s [%sexp (evaluation : Evaluation.t)];
-       let evaluation = evaluate win_for_x in
+       let evaluation = evaluate non_win in
        print_s [%sexp (evaluation : Evaluation.t)];
        return ())
 
