@@ -212,6 +212,24 @@ let command =
 
 (* Exercise 5 *)
 let make_move ~(game : Game.t) ~(you_play : Piece.t) : Position.t =
-  ignore game;
-  ignore you_play;
-  failwith "Implement me!"
+  let open_positions = available_moves game in 
+  let win_moves = winning_moves ~me:you_play game in 
+  let block_moves = losing_moves ~me:you_play game in
+  let board_size = find_board_length game in 
+  let center = {Position.row = board_size/2; Position.column = board_size/2} in 
+  let bottom_right_edge = {Position.row = board_size-1; Position.column = board_size-1} in 
+
+  if not (List.is_empty block_moves) 
+    then List.hd_exn block_moves 
+else 
+  if (List.mem open_positions center ~equal:Position.equal) then
+    center
+  else 
+    if (List.mem open_positions bottom_right_edge ~equal:Position.equal) then
+    bottom_right_edge
+  else 
+  if not (List.is_empty win_moves)
+    then List.hd_exn win_moves 
+else List.hd_exn open_positions
+
+
