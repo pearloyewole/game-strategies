@@ -139,9 +139,16 @@ let evaluate (game : Game.t) : Evaluation.t =
 
 (* Exercise 3 *)
 let winning_moves ~(me : Piece.t) (game : Game.t) : Position.t list =
-  ignore me;
-  ignore game;
-  failwith "Implement me!"
+  (*find winning moves by figuring out the next location to move to 
+  use check for win and the piece you are given 
+  *)
+  let available_positions = available_moves game in 
+  List.filter available_positions ~f:(fun pos ->
+    let simulated_board = Map.set game.board ~key:pos ~data:me in
+    let simulated_game = {game with board = simulated_board} in 
+    check_for_win simulated_game me 
+  )
+
 
 (* Exercise 4 *)
 let losing_moves ~(me : Piece.t) (game : Game.t) : Position.t list =
