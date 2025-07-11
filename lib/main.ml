@@ -45,11 +45,10 @@ let print_game (game : Game.t) =
     print_endline cell_strings
   in
   (**put into a list then print*)
-  print_row 0;
-  print_endline "---------";
-  print_row 1;
-  print_endline "---------";
-  print_row 2
+
+  let indices =
+      List.init (find_board_length game) ~f:(fun row -> row) in 
+  List.iter indices ~f:(fun row -> print_row row; print_endline (String.make (find_board_length game * 4) '-'))
 
 let%expect_test "print_win_for_x" =
   print_game win_for_x;
@@ -110,6 +109,7 @@ let check_for_win (game: Game.t) (target_piece: Piece.t): bool =
     )
   )
 
+
 (* Exercise 2 *)
 let evaluate (game : Game.t) : Evaluation.t =
   (*check for an illegal move, then check for a win, and then if all cells are full and no winnner, then draw, otheriwse continue*)
@@ -157,6 +157,20 @@ let losing_moves ~(me : Piece.t) (game : Game.t) : Position.t list =
     let losing_list = winning_moves ~me:opponent_piece game in 
     losing_list
 
+let available_moves_that_do_not_immediately_lose ~(me : Piece.t) (game : Game.t) : Position.t list = 
+    (*find all the moves that are legal and will not let the opponent win*)
+    let open_moves = available_moves game in 
+    let safe_moves = List.filter open_moves ~f:(fun move ->
+      let simulated_board = Map.set game.board ~key:move ~data:me in 
+      let simulated_game = {game with board = simulated_board} in
+      let opponent_wins = losing_moves ~me: me simulated_game in 
+      List.is_empty opponent_wins
+      )  in 
+
+      safe_moves 
+
+
+
 let exercise_one =
   Command.async ~summary:"Exercise 1: Where can I move?"
     (let%map_open.Command () = return () in
@@ -201,6 +215,14 @@ let exercise_four =
        print_s [%sexp (losing_moves : Position.t list)];
        return ())
 
+let exercise_six=
+  Command.async ~summary:"Exercise 6: one move ahead"
+    (let%map_open.Command () = return () and piece = piece_flag in
+     fun () ->
+       let losing_moves = available_moves_that_do_not_immediately_lose ~me:piece non_win in
+       print_s [%sexp (losing_moves : Position.t list)];
+       return ())
+
 let command =
   Command.group ~summary:"Exercises"
     [
@@ -208,28 +230,84 @@ let command =
       ("two", exercise_two);
       ("three", exercise_three);
       ("four", exercise_four);
+      ("six", exercise_six;)
     ]
 
 (* Exercise 5 *)
-let make_move ~(game : Game.t) ~(you_play : Piece.t) : Position.t =
-  let open_positions = available_moves game in 
-  let win_moves = winning_moves ~me:you_play game in 
+
+let score ~(game : Game.t) (you_play : Piece.t) : float =
+  match evaluate game with
+  | Game_over { winner = Some winner } ->
+      if Piece.equal winner you_play then Float.infinity else -.Float.infinity
+  | Game_over { winner = None } -> 0.0  
+  | Game_continues -> 0.0  
+  | Illegal_move -> -.Float.infinity
+
+let simulate (game : Game.t) (pos : Position.t) (piece : Piece.t) : Game.t =
+  let new_board = Map.set game.board ~key:pos ~data:piece in
+  { game with board = new_board }
+
+let rec minimax ~(game : Game.t) ~(depth : int) ~(you_play : Piece.t) ~(maximizing : bool) : float =
+  match evaluate game with
+  | Game_over _ | Illegal_move ->
+      score ~game:game you_play
+  | Game_continues ->
+      if depth = 0 then score ~game:game you_play
+      else
+        let moves = available_moves game in
+        if maximizing then
+          List.fold moves ~init:(-.Float.infinity) ~f:(fun acc move ->
+            let sim_game = simulate game move you_play in
+            let eval = minimax ~game:sim_game  ~depth:(depth - 1)
+                                  ~you_play ~maximizing:false in
+            Float.max acc eval
+          )
+        else
+          let opponent = Piece.flip you_play in
+          List.fold moves ~init: Float.infinity ~f:(fun acc move ->
+            let sim_game = simulate game move opponent in
+            let eval = minimax ~game: sim_game ~depth:(depth - 1)
+                                  ~you_play:you_play ~maximizing:true in
+            Float.min acc eval
+          )
+
+let best_move ~(game : Game.t) ~(you_play : Piece.t) ~(depth : int) : Position.t list =
+  let moves = available_moves game in
+  match moves with
+  | [] -> []
+  | _ ->
+    let scored_moves = List.map moves ~f:(fun move ->
+      let sim_game = simulate game move you_play in
+      let score = minimax ~game:sim_game ~depth:(depth - 1)
+                          ~you_play:you_play ~maximizing:false in
+      (move, score, evaluate sim_game)
+    ) in
+    let max_score =
+      List.fold scored_moves ~init:Float.neg_infinity ~f:(fun acc (_, score, _) ->
+        Float.max acc score)
+    in
+    print_game game ; 
+    print_s [%message (scored_moves: (Position.t * float * Evaluation.t) list) ] ; 
+    List.filter scored_moves ~f:(fun (_, score, _) -> Float.equal score max_score)
+    |> List.map ~f:(fun (move, _, _) -> move)
+
+
+
+
+  let make_move ~(game : Game.t) ~(you_play : Piece.t) : Position.t =
+  let open_positions = available_moves_that_do_not_immediately_lose ~me: you_play game in 
+  let _win_moves = winning_moves ~me:you_play game in
+  let safe_moves = best_move ~game: game ~you_play: you_play ~depth: 1 in 
   let block_moves = losing_moves ~me:you_play game in
   let board_size = find_board_length game in 
-  let center = {Position.row = board_size/2; Position.column = board_size/2} in 
-  let bottom_right_edge = {Position.row = board_size-1; Position.column = board_size-1} in 
+  let _center = {Position.row = board_size/2; Position.column = board_size/2} in  
+  let _bottom_right_edge = {Position.row = board_size-1; Position.column = board_size-1} in 
 
-  if not (List.is_empty block_moves) 
-    then List.hd_exn block_moves 
+  if not (List.is_empty safe_moves)
+    then List.nth_exn safe_moves (Random.State.int (Random.State.make_self_init ()) (List.length safe_moves))
+  else 
+    if not (List.is_empty block_moves || List.length block_moves > 1) 
+    then 
+      List.nth_exn block_moves (Random.State.int (Random.State.make_self_init ()) (List.length block_moves))
 else 
-  if (List.mem open_positions center ~equal:Position.equal) then
-    center
-  else 
-    if (List.mem open_positions bottom_right_edge ~equal:Position.equal) then
-    bottom_right_edge
-  else 
-  if not (List.is_empty win_moves)
-    then List.hd_exn win_moves 
-else List.hd_exn open_positions
-
-
+  List.nth_exn  open_positions (Random.State.int (Random.State.make_self_init ()) (List.length open_positions))
